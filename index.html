@@ -109,6 +109,7 @@ header h1 {
     overflow: hidden;
     cursor: pointer;
     transition: 0.3s;
+    position: relative;
 }
 
 .video-card:hover {
@@ -127,6 +128,61 @@ header h1 {
 
 .video-card h4 {
     font-size: 15px;
+}
+
+.timer {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(220, 38, 38, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 10;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+}
+.modal-content {
+    background: #1e293b;
+    padding: 24px;
+    border-radius: 10px;
+    text-align: center;
+    max-width: 320px;
+    width: 90%;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+.modal-content h3 {
+    margin-bottom: 12px;
+    color: #ef4444;
+}
+.modal-content p {
+    margin-bottom: 20px;
+    font-size: 15px;
+    color: #cbd5e1;
+}
+.modal-content button {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    width: 100%;
+}
+.modal-content button:hover {
+    background: #2563eb;
 }
 
 /* Mobile */
@@ -172,6 +228,15 @@ header h1 {
 
 <!-- 🎞 Gallery -->
 <div class="video-gallery" id="videoGallery"></div>
+
+<!-- Custom Modal -->
+<div id="customModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Notice</h3>
+        <p id="modalMessage"></p>
+        <button onclick="closeModal()">OK</button>
+    </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -241,26 +306,77 @@ function getVideoURL(data){
     return null;
 }
 
+/* Custom Modal */
+window.showModal = function(message) {
+    document.getElementById('modalMessage').innerText = message;
+    document.getElementById('customModal').style.display = 'flex';
+}
+
+window.closeModal = function() {
+    document.getElementById('customModal').style.display = 'none';
+}
+
 /* 📡 Fetch Videos */
 const q = query(collection(db,"videos"), orderBy("createdAt","desc"));
 
 onSnapshot(q,(snapshot)=>{
     gallery.innerHTML = "";
 
+    // Clear existing intervals
+    if (window.timerIntervals) window.timerIntervals.forEach(clearInterval);
+    window.timerIntervals = [];
+
     snapshot.forEach(doc=>{
         const data = doc.data();
 
         const card = document.createElement("div");
         card.className = "video-card";
+        
+        const now = Date.now();
+        const createdAt = data.createdAt || 0;
+        const lockTime = 200 * 60 * 1000;
+        let isLocked = (now - createdAt) < lockTime;
+        let timerHTML = isLocked ? `<div class="timer" id="timer-${doc.id}"></div>` : '';
+        let timerInterval;
 
         card.innerHTML = `
             <img src="${data.thumbnail}" />
+            ${timerHTML}
             <div class="info">
                 <h4>${data.title}</h4>
             </div>
         `;
 
+        if (isLocked) {
+            const timerEl = card.querySelector(`#timer-${doc.id}`);
+            const updateTimer = () => {
+                const currentNow = Date.now();
+                const remaining = lockTime - (currentNow - createdAt);
+                
+                if (remaining <= 0) {
+                    isLocked = false;
+                    if (timerEl) timerEl.style.display = 'none';
+                    if (timerInterval) clearInterval(timerInterval);
+                } else {
+                    const mins = Math.floor(remaining / 1000 / 60);
+                    const secs = Math.floor((remaining / 1000) % 60);
+                    if (timerEl) timerEl.innerText = `Available in ${mins}m ${secs}s`;
+                }
+            };
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 1000);
+            window.timerIntervals.push(timerInterval);
+        }
+
         card.onclick = ()=>{
+            if (isLocked) {
+                const currentNow = Date.now();
+                const remaining = lockTime - (currentNow - createdAt);
+                const mins = Math.ceil(remaining / 1000 / 60);
+                showModal(`Wait for ${mins} min, come after ${mins} min.`);
+                return;
+            }
+
             const url = getVideoURL(data);
             currentTitle = data.title;
 
