@@ -854,18 +854,6 @@ window.buildCard = function(item, index) {
             showModal("Almost Ready! 🍿", `This video is getting ready for its big premiere! 🎉\n\nIt will be fully playable right here in just ${mins} minute(s).\n\nOnce the countdown timer on the cover finishes, tap here again to start watching!`);
             return;
         }
-
-        const url = getVideoURL(data);
-        if (data.platform === "photos" || (url && url.includes("photos"))) {
-            // Increment view count in Firebase
-            const videoRef = doc(db, "videos", id);
-            updateDoc(videoRef, { views: increment(1) })
-                .catch(err => console.error("Error updating view count:", err));
-            
-            window.open(url, '_blank');
-            setTimeout(showHome, 500); // Auto-return to Home page in the background
-            return;
-        }
         
         openPlayer(item);
     };
@@ -888,6 +876,11 @@ window.openPlayer = function(item) {
     const videoRef = doc(db, "videos", id);
     updateDoc(videoRef, { views: increment(1) })
         .catch(err => console.error("Error updating view count:", err));
+
+    if (data.platform === "photos" || url.includes("photos")) {
+        window.location.href = url; // Skip the player completely and go directly to the link
+        return;
+    }
 
     gallery.style.display = "none";
     document.getElementById('loadMoreContainer').style.display = "none";
@@ -941,23 +934,6 @@ window.openPlayer = function(item) {
             if (loader) loader.style.display = 'none';
         };
         container.appendChild(iframe);
-    } else if (data.platform === "photos" || url.includes("photos")) {
-        container.innerHTML = `
-            <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; text-align:center; padding: 20px; background: #111827;">
-                <p style="color: #cbd5e1; margin-bottom: 20px; font-size: 16px;">Google Photos restricts playing this video directly inside the app.</p>
-                <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
-                    <a href="${url}" target="_blank" onclick="setTimeout(showHome, 500)" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; transition: background 0.2s;">
-                        Watch on Google Photos ↗
-                    </a>
-                    <button onclick="showHome()" style="background: #334155; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s;">
-                        ⬅ Go Back to Home Page
-                    </button>
-                </div>
-            </div>
-        `;
-        clearTimeout(loadTimeout);
-        const loader = document.getElementById('videoLoader');
-        if (loader) loader.style.display = 'none';
     } else {
         const video = document.createElement('video');
         video.controls = true;
