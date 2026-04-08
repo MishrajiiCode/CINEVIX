@@ -877,11 +877,6 @@ window.openPlayer = function(item) {
     updateDoc(videoRef, { views: increment(1) })
         .catch(err => console.error("Error updating view count:", err));
 
-    if (data.platform === "photos" || url.includes("photos")) {
-        window.location.href = url; // Skip the player completely and go directly to the link
-        return;
-    }
-
     gallery.style.display = "none";
     document.getElementById('loadMoreContainer').style.display = "none";
     player.style.display = "block";
