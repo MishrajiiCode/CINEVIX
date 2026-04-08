@@ -855,6 +855,22 @@ window.buildCard = function(item, index) {
             return;
         }
         
+        const url = getVideoURL(data);
+
+        // For Google Photos, open the link immediately to avoid popup blockers and delays on mobile.
+        if (data.platform === 'photos' || (url && url.includes('photos'))) {
+            // Open link directly in the SAME tab for maximum speed
+            window.location.href = url;
+
+            // Then, update the view count in the background without delaying the user.
+            const videoRef = doc(db, "videos", id);
+            updateDoc(videoRef, { views: increment(1) })
+                .catch(err => console.error("Error updating view count for photos link:", err));
+            
+            return; // Stop here, do not open the in-app player.
+        }
+        
+        // For all other video types (YouTube, Drive, Images), open the regular in-app player.
         openPlayer(item);
     };
 
@@ -876,10 +892,6 @@ window.openPlayer = function(item) {
     const videoRef = doc(db, "videos", id);
     updateDoc(videoRef, { views: increment(1) })
         .catch(err => console.error("Error updating view count:", err));
-
-    gallery.style.display = "none";
-    document.getElementById('loadMoreContainer').style.display = "none";
-    player.style.display = "block";
 
     container.innerHTML = `
         <div class="video-loader" id="videoLoader">
