@@ -859,8 +859,14 @@ window.buildCard = function(item, index) {
 
         // For Google Photos, open the link immediately to avoid popup blockers and delays on mobile.
         if (data.platform === 'photos' || (url && url.includes('photos'))) {
-            // Open link directly in the SAME tab for maximum speed
-            window.location.href = url;
+            // Force the link to open in the external native browser (like Google Chrome) instead of the app
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
 
             // Then, update the view count in the background without delaying the user.
             const videoRef = doc(db, "videos", id);
