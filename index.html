@@ -38,6 +38,12 @@ body {
 header {
     text-align: center;
     padding: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: rgba(11, 15, 25, 0.7);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .header-top {
@@ -83,13 +89,14 @@ header h1 {
 .tab-btn {
     flex: 1;
     padding: 12px;
-    background: #1e293b;
+    background: rgba(30, 41, 59, 0.6);
     color: #cbd5e1;
-    border: 2px solid transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
+    backdrop-filter: blur(8px);
     transition: all 0.3s ease;
 }
 .tab-btn.active {
@@ -102,16 +109,21 @@ header h1 {
     flex: 1;
     padding: 12px;
     border-radius: 8px;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     outline: none;
+    background: rgba(30, 41, 59, 0.6);
+    color: white;
+}
+#searchBar::placeholder {
+    color: #94a3b8;
 }
 
 #sortSelect {
     padding: 12px;
     border-radius: 8px;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     outline: none;
-    background: #1e293b;
+    background: rgba(30, 41, 59, 0.8);
     color: white;
     cursor: pointer;
     font-family: 'Inter', sans-serif;
@@ -237,17 +249,22 @@ header h1 {
 }
 
 .video-card {
-    background: #1e293b;
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
     border-radius: 10px;
     overflow: hidden;
     cursor: pointer;
     transition: 0.3s;
     position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
     animation: fadeIn 0.4s ease backwards;
 }
 
 .video-card:hover {
     transform: scale(1.05);
+    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.3);
+    border-color: rgba(59, 130, 246, 0.5);
 }
 
 .video-card img {
@@ -262,12 +279,12 @@ header h1 {
     left: 0;
     width: 100%;
     height: 150px;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
     display: flex;
     justify-content: center;
     align-items: center;
     opacity: 0;
-    transition: opacity 0.3s ease;
 }
 .video-card:hover .play-overlay {
     opacity: 1;
@@ -462,6 +479,7 @@ header h1 {
     <div class="tabs-container">
         <button id="tab-entertainment" class="tab-btn active" onclick="switchTab('entertainment')">🍿 Entertainment</button>
         <button id="tab-study" class="tab-btn" onclick="switchTab('study')">📚 Study</button>
+        <button id="tab-images" class="tab-btn" onclick="switchTab('images')">🖼️ Images</button>
     </div>
 </header>
 
@@ -496,7 +514,7 @@ header h1 {
     <br>
     <button class="back-btn" onclick="showHome()">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
-        Back to Movies
+        Back to Home
     </button>
 </div>
 
@@ -505,7 +523,7 @@ header h1 {
 
     <button class="back-btn" onclick="closePlayer()">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
-        Back to Movies
+        Back
     </button>
 
     <div class="video-container" id="videoContainer"></div>
@@ -518,7 +536,7 @@ header h1 {
 
     <!-- Related Videos -->
     <div id="relatedVideosSection" style="display: none; margin-top: 30px;">
-        <h3 style="margin-bottom: 15px; color: #3b82f6;">Related Videos</h3>
+        <h3 id="relatedVideosTitle" style="margin-bottom: 15px; color: #3b82f6;">Related Videos</h3>
         <div class="video-gallery" id="relatedVideosGallery" style="padding: 0;"></div>
     </div>
 
@@ -589,6 +607,11 @@ function getVideoURL(data){
         return `https://drive.google.com/file/d/${driveId}/preview`;
     }
 
+    // Photos or direct image / other
+    if(data.platform === "photos" || data.platform === "image" || data.mediaType === "image" || data.platform === "other"){
+        return data.videoId || data.videoUrl;
+    }
+
     // Fallback for older legacy videos in your database
     if(data.videoId) {
         if(data.videoId.length === 11) return `https://www.youtube.com/embed/${data.videoId}`;
@@ -618,10 +641,14 @@ let showingBookmarks = false;
 window.showHome = function() {
     closeMenu();
     showingBookmarks = false;
+    currentCategory = 'entertainment'; // Always reset to the main Home tab
     document.getElementById('aboutPage').style.display = 'none';
     document.getElementById('mainHeader').style.display = 'block';
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(`tab-${currentCategory}`).classList.add('active');
+    const activeTab = document.getElementById('tab-entertainment');
+    if(activeTab) {
+        activeTab.classList.add('active');
+    }
     closePlayer(); 
 }
 
@@ -700,7 +727,8 @@ window.switchTab = function(category) {
     
     // Update active tab styles
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(`tab-${category}`).classList.add('active');
+    const activeTab = document.getElementById(`tab-${category}`);
+    if(activeTab) activeTab.classList.add('active');
     
     visibleCount = ITEMS_PER_PAGE;
     renderVideos();
@@ -724,10 +752,15 @@ window.renderVideos = function() {
         const bookmarks = getBookmarks();
         filteredVideos = currentVideos.filter(item => bookmarks.includes(item.id));
     } else {
-        filteredVideos = currentVideos.filter(item => {
-            const videoCategory = item.data.category || 'entertainment';
-            return videoCategory === currentCategory;
-        });
+        if (currentCategory === 'images') {
+            filteredVideos = currentVideos.filter(item => item.data.mediaType === 'image');
+        } else {
+            filteredVideos = currentVideos.filter(item => {
+                const videoCategory = item.data.category || 'entertainment';
+                const mediaType = item.data.mediaType || 'video';
+                return videoCategory === currentCategory && mediaType !== 'image';
+            });
+        }
     }
 
     // 2. Filter by search
@@ -769,15 +802,21 @@ window.buildCard = function(item, index) {
     
     const now = Date.now();
     const createdAt = data.createdAt || 0;
-    const lockTime = 200 * 60 * 1000;
-    let isLocked = (now - createdAt) < lockTime;
+    const lockMinutes = data.lockTimer !== undefined ? Number(data.lockTimer) : 200;
+    const lockTime = lockMinutes * 60 * 1000;
+    let isLocked = lockTime > 0 ? (now - createdAt) < lockTime : false;
     let timerHTML = isLocked ? `<div class="timer" id="timer-${id}"></div>` : '';
     let timerInterval;
 
+    const isImageCard = data.mediaType === 'image';
+    const overlayIcon = isImageCard 
+        ? `<svg width="48" height="48" fill="white" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`
+        : `<svg width="48" height="48" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+
     card.innerHTML = `
-        <img src="${data.thumbnail}" />
+        <img src="${data.thumbnail}" alt="Thumbnail" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=500&auto=format&fit=crop';" />
         <div class="play-overlay">
-            <svg width="48" height="48" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            ${overlayIcon}
         </div>
         ${timerHTML}
         <div class="info">
@@ -815,6 +854,19 @@ window.buildCard = function(item, index) {
             showModal("Almost Ready! 🍿", `This video is getting ready for its big premiere! 🎉\n\nIt will be fully playable right here in just ${mins} minute(s).\n\nOnce the countdown timer on the cover finishes, tap here again to start watching!`);
             return;
         }
+
+        const url = getVideoURL(data);
+        if (data.platform === "photos" || (url && url.includes("photos"))) {
+            // Increment view count in Firebase
+            const videoRef = doc(db, "videos", id);
+            updateDoc(videoRef, { views: increment(1) })
+                .catch(err => console.error("Error updating view count:", err));
+            
+            window.open(url, '_blank');
+            setTimeout(showHome, 500); // Auto-return to Home page in the background
+            return;
+        }
+        
         openPlayer(item);
     };
 
@@ -844,7 +896,7 @@ window.openPlayer = function(item) {
     container.innerHTML = `
         <div class="video-loader" id="videoLoader">
             <div class="spinner" id="loadingSpinner"></div>
-            <p id="loadingText" style="color: #cbd5e1; font-size: 15px;">Loading video...</p>
+            <p id="loadingText" style="color: #cbd5e1; font-size: 15px;">Loading media...</p>
         </div>
     `;
 
@@ -860,7 +912,23 @@ window.openPlayer = function(item) {
         }
     }, 30000);
 
-    if(url.includes("youtube") || url.includes("drive")){
+    const isDirectImage = data.mediaType === 'image' && (data.platform === 'image' || url.match(/\.(jpeg|jpg|gif|png|webp)$/i));
+
+    if (isDirectImage) {
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        img.style.position = 'relative';
+        img.style.zIndex = '10';
+        img.onload = () => {
+            clearTimeout(loadTimeout);
+            const loader = document.getElementById('videoLoader');
+            if (loader) loader.style.display = 'none';
+        };
+        container.appendChild(img);
+    } else if(url.includes("youtube") || url.includes("drive") || data.platform === "other"){
         const iframe = document.createElement('iframe');
         iframe.src = url;
         iframe.setAttribute("allowfullscreen", "true");
@@ -873,12 +941,31 @@ window.openPlayer = function(item) {
             if (loader) loader.style.display = 'none';
         };
         container.appendChild(iframe);
+    } else if (data.platform === "photos" || url.includes("photos")) {
+        container.innerHTML = `
+            <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; text-align:center; padding: 20px; background: #111827;">
+                <p style="color: #cbd5e1; margin-bottom: 20px; font-size: 16px;">Google Photos restricts playing this video directly inside the app.</p>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                    <a href="${url}" target="_blank" onclick="setTimeout(showHome, 500)" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; transition: background 0.2s;">
+                        Watch on Google Photos ↗
+                    </a>
+                    <button onclick="showHome()" style="background: #334155; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s;">
+                        ⬅ Go Back to Home Page
+                    </button>
+                </div>
+            </div>
+        `;
+        clearTimeout(loadTimeout);
+        const loader = document.getElementById('videoLoader');
+        if (loader) loader.style.display = 'none';
     } else {
         const video = document.createElement('video');
         video.controls = true;
         video.autoplay = true;
         video.style.position = 'relative';
         video.style.zIndex = '10';
+        video.style.width = '100%';
+        video.style.height = '100%';
         const source = document.createElement('source');
         source.src = url;
         video.appendChild(source);
@@ -916,13 +1003,20 @@ window.openPlayer = function(item) {
 /* Helper: Render Related Videos */
 window.renderRelatedVideos = function(currentId) {
     const relatedSection = document.getElementById("relatedVideosSection");
+    const relatedTitle = document.getElementById("relatedVideosTitle");
     const relatedGallery = document.getElementById("relatedVideosGallery");
     relatedGallery.innerHTML = "";
 
     let related = currentVideos.filter(v => {
         const cat = v.data.category || 'entertainment';
-        return cat === currentCategory && v.id !== currentId;
+        const type = v.data.mediaType || 'video';
+        if (currentCategory === 'images') {
+            return type === 'image' && v.id !== currentId;
+        }
+        return cat === currentCategory && type !== 'image' && v.id !== currentId;
     });
+
+    if (relatedTitle) relatedTitle.innerText = currentCategory === 'images' ? "Related Images" : "Related Videos";
 
     // Shuffle array and take top 4
     related = related.sort(() => 0.5 - Math.random()).slice(0, 4);
