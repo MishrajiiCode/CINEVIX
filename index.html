@@ -198,6 +198,12 @@ header h1 {
     border-color: rgba(59, 130, 246, 0.5);
 }
 
+/* When a card is an anchor tag, remove default link styling */
+a.video-card {
+    color: inherit;
+    text-decoration: none;
+}
+
 .video-card img {
     width: 100%;
     height: 150px;
@@ -675,10 +681,10 @@ window.buildCard = function(item, index) {
     const data = item.data;
     const id = item.id;
 
-    const card = document.createElement("div");
+    const card = document.createElement("a");
     card.className = "video-card";
     if (index !== undefined) card.style.animationDelay = `${index * 0.05}s`;
-    
+
     const isImageCard = data.mediaType === 'image';
     const overlayIcon = isImageCard 
         ? `<svg width="48" height="48" fill="white" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`
@@ -695,28 +701,27 @@ window.buildCard = function(item, index) {
         </div>
     `;
 
-    card.onclick = () => {
-        // This new function will generate youtube.com/watch, drive.google.com/view, etc.
-        const externalUrl = getPlaybackURL(data); 
+    const externalUrl = getPlaybackURL(data); 
 
-        if (externalUrl) {
+    if (externalUrl) {
+        card.href = externalUrl;
+        card.target = '_blank';
+        card.rel = 'noopener noreferrer';
+
+        // Add a click listener to update views without interfering with navigation
+        card.addEventListener('click', () => {
             // Update the view count in the background
             const videoRef = doc(db, "videos", id);
             updateDoc(videoRef, { views: increment(1) })
                 .catch(err => console.error("Error updating view count:", err));
-
-            // Force the link to open in an external browser/app, not in-app.
-            const a = document.createElement('a');
-            a.href = externalUrl;
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        } else {
+        });
+    } else {
+        card.href = 'javascript:void(0);'; // Prevent navigation
+        card.onclick = (e) => {
+            e.preventDefault(); // Stop the link from doing anything
             showModal("Error", "We're sorry, but the link for this media is missing or corrupted.");
-        }
-    };
+        };
+    }
 
     return card;
 };
