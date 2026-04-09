@@ -458,17 +458,8 @@ a.video-card {
 
 <!-- 🌟 Featured Link Section -->
 <div class="featured-section" id="featuredLinkWrapper">
-    <h3>🌟 Featured Link</h3>
-    <a href="#" target="_blank" rel="noopener noreferrer" class="video-card" id="featuredLinkCard" style="display: block; max-width: 400px;">
-        <img src="https://images.unsplash.com/photo-1574267432553-4b4628081c31?q=80&w=500&auto=format&fit=crop" style="height: 180px;" alt="Featured Content" />
-        <div class="play-overlay">
-            <svg width="48" height="48" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </div>
-        <div class="info">
-            <h4>Special Featured Content</h4>
-            <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Tap to open directly in browser</p>
-        </div>
-    </a>
+    <h3>🌟 Featured Links</h3>
+    <div id="featuredLinksContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px,1fr)); gap: 15px;"></div>
 </div>
 
 <!-- 🎞 Gallery -->
@@ -658,6 +649,7 @@ window.loadMoreVideos = function() {
 }
 
 window.renderVideos = function() {
+    if (typeof renderFeaturedLinks === 'function') renderFeaturedLinks();
     gallery.innerHTML = "";
 
     // 1. Filter by category OR Bookmarks
@@ -780,15 +772,45 @@ window.fetchVideos = function(sortType) {
 
 /* 🌟 Fetch Featured Link */
 const featuredLinkWrapper = document.getElementById('featuredLinkWrapper');
-const featuredLinkCard = document.getElementById('featuredLinkCard');
-onSnapshot(doc(db, "shared_links", "latest_link"), (docSnap) => {
-    if (docSnap.exists() && docSnap.data().url) {
+const featuredLinksContainer = document.getElementById('featuredLinksContainer');
+let allFeaturedLinks = [];
+
+onSnapshot(query(collection(db, "featured_links"), orderBy("timestamp", "desc")), (snapshot) => {
+    allFeaturedLinks = [];
+    snapshot.forEach(docSnap => {
+        allFeaturedLinks.push({ id: docSnap.id, data: docSnap.data() });
+    });
+    if (typeof renderFeaturedLinks === 'function') renderFeaturedLinks();
+});
+
+window.renderFeaturedLinks = function() {
+    featuredLinksContainer.innerHTML = '';
+    const filtered = allFeaturedLinks.filter(link => link.data.category === currentCategory);
+
+    if (filtered.length > 0 && !showingBookmarks) {
         featuredLinkWrapper.style.display = 'block';
-        featuredLinkCard.href = docSnap.data().url;
+        filtered.forEach(link => {
+            const card = document.createElement("a");
+            card.className = "video-card";
+            card.href = link.data.url;
+            card.target = '_blank';
+            card.rel = 'noopener noreferrer';
+            card.innerHTML = `
+                <img src="https://images.unsplash.com/photo-1574267432553-4b4628081c31?q=80&w=500&auto=format&fit=crop" style="height: 150px;" alt="Featured Content" />
+                <div class="play-overlay">
+                    <svg width="48" height="48" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <div class="info">
+                    <h4>${link.data.title}</h4>
+                    <p style="font-size: 12px; color: #f59e0b; margin-top: 4px;">🌟 Featured Link</p>
+                </div>
+            `;
+            featuredLinksContainer.appendChild(card);
+        });
     } else {
         featuredLinkWrapper.style.display = 'none';
     }
-});
+}
 
 // Initialize gallery with "Recently Added" sorting
 fetchVideos("recent");
