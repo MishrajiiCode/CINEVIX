@@ -130,52 +130,6 @@ header h1 {
     font-weight: 600;
 }
 
-/* Player Section */
-.player-wrapper {
-    display: none;
-    padding: 10px;
-}
-
-.video-container {
-    width: 100%;
-    aspect-ratio: 16/9;
-    background: black;
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
-}
-
-.video-container iframe,
-.video-container video {
-    width: 100%;
-    height: 100%;
-    border: none;
-}
-
-/* Loading Placeholder */
-.video-loader {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background: #111827;
-    z-index: 5;
-}
-.spinner {
-    width: 50px;
-    height: 50px;
-    border: 4px solid rgba(59, 130, 246, 0.2);
-    border-top-color: #3b82f6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 15px;
-}
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
 /* Back Button */
 .back-btn {
     display: inline-flex;
@@ -195,29 +149,6 @@ header h1 {
 .back-btn:hover {
     background: #475569;
 }
-
-/* Player Actions */
-.player-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
-.action-btn {
-    background: #1e293b;
-    color: #cbd5e1;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: background 0.2s, color 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-.action-btn:hover { background: #334155; color: white; }
-.action-btn.active { background: #3b82f6; color: white; }
 
 /* Load More */
 .load-more-container {
@@ -296,19 +227,6 @@ header h1 {
 
 .video-card h4 {
     font-size: 15px;
-}
-
-.timer {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(220, 38, 38, 0.9);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
-    z-index: 10;
 }
 
 /* Modal Styles */
@@ -518,30 +436,6 @@ header h1 {
     </button>
 </div>
 
-<!-- 🎥 Player -->
-<div class="player-wrapper" id="playerWrapper">
-
-    <button class="back-btn" onclick="closePlayer()">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
-        Back
-    </button>
-
-    <div class="video-container" id="videoContainer"></div>
-
-    <!-- Player Action Buttons -->
-    <div class="player-actions" id="playerActions">
-        <button class="action-btn" id="shareBtn">🔗 Share Link</button>
-        <button class="action-btn" id="bookmarkBtn">🔖 Watch Later</button>
-    </div>
-
-    <!-- Related Videos -->
-    <div id="relatedVideosSection" style="display: none; margin-top: 30px;">
-        <h3 id="relatedVideosTitle" style="margin-bottom: 15px; color: #3b82f6;">Related Videos</h3>
-        <div class="video-gallery" id="relatedVideosGallery" style="padding: 0;"></div>
-    </div>
-
-</div>
-
 <!-- 🎞 Gallery -->
 <div class="video-gallery" id="videoGallery"></div>
 
@@ -579,46 +473,37 @@ const db = getFirestore(app);
 
 /* DOM Elements */
 const gallery = document.getElementById("videoGallery");
-const player = document.getElementById("playerWrapper");
-const container = document.getElementById("videoContainer");
 
 /* 🎬 Splash hide */
 setTimeout(()=>{
     document.getElementById("splash").style.display="none";
 },12000);
 
-/* ⬅ Close Player */
-window.closePlayer = function(){
-    player.style.display = "none";
-    gallery.style.display = "grid";
-    container.innerHTML = "";
-    if(typeof renderVideos === 'function') renderVideos(); // Restore gallery state and Load More button
-}
-
-/* 🎥 Get Video URL */
-function getVideoURL(data){
-
-    if(data.platform === "youtube"){
-        return `https://www.youtube.com/embed/${data.videoId}`;
+/* 🎥 Get Playback URL for external opening */
+function getPlaybackURL(data) {
+    if (data.platform === "youtube") {
+        return `https://www.youtube.com/watch?v=${data.videoId}`;
     }
 
-    if(data.platform === "drive" || data.driveVideoId){
+    if (data.platform === "drive" || data.driveVideoId) {
         const driveId = data.driveVideoId || data.videoId;
-        return `https://drive.google.com/file/d/${driveId}/preview`;
+        return `https://drive.google.com/file/d/${driveId}/view`;
     }
 
-    // Photos or direct image / other
-    if(data.platform === "photos" || data.platform === "image" || data.mediaType === "image" || data.platform === "other"){
+    // For Photos, direct images, and other links, the stored videoId is the direct URL.
+    if (data.platform === "photos" || data.platform === "image" || data.mediaType === "image" || data.platform === "other") {
         return data.videoId || data.videoUrl;
     }
 
-    // Fallback for older legacy videos in your database
-    if(data.videoId) {
-        if(data.videoId.length === 11) return `https://www.youtube.com/embed/${data.videoId}`;
-        return `https://drive.google.com/file/d/${data.videoId}/preview`;
+    // Fallback for older legacy videos
+    if (data.videoId) {
+        // YouTube ID is 11 chars
+        if (data.videoId.length === 11) return `https://www.youtube.com/watch?v=${data.videoId}`;
+        // Assume Drive ID
+        return `https://drive.google.com/file/d/${data.videoId}/view`;
     }
 
-    if(data.videoUrl){
+    if (data.videoUrl) {
         return data.videoUrl;
     }
 
@@ -644,20 +529,18 @@ window.showHome = function() {
     currentCategory = 'entertainment'; // Always reset to the main Home tab
     document.getElementById('aboutPage').style.display = 'none';
     document.getElementById('mainHeader').style.display = 'block';
+    document.getElementById('videoGallery').style.display = 'grid';
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     const activeTab = document.getElementById('tab-entertainment');
     if(activeTab) {
         activeTab.classList.add('active');
     }
-    closePlayer(); 
 }
 
 window.showAbout = function() {
     closeMenu();
     document.getElementById('mainHeader').style.display = 'none';
     document.getElementById('videoGallery').style.display = 'none';
-    document.getElementById('playerWrapper').style.display = 'none';
-    container.innerHTML = ""; 
     document.getElementById('aboutPage').style.display = 'block';
 }
 
@@ -666,7 +549,7 @@ window.showBookmarks = function() {
     showingBookmarks = true;
     document.getElementById('aboutPage').style.display = 'none';
     document.getElementById('mainHeader').style.display = 'block';
-    closePlayer();
+    document.getElementById('videoGallery').style.display = 'grid';
     
     // Remove active styles from regular tabs
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -742,10 +625,6 @@ window.loadMoreVideos = function() {
 window.renderVideos = function() {
     gallery.innerHTML = "";
 
-    // Clear existing intervals
-    if (window.timerIntervals) window.timerIntervals.forEach(clearInterval);
-    window.timerIntervals = [];
-
     // 1. Filter by category OR Bookmarks
     let filteredVideos = currentVideos;
     if (showingBookmarks) {
@@ -800,14 +679,6 @@ window.buildCard = function(item, index) {
     card.className = "video-card";
     if (index !== undefined) card.style.animationDelay = `${index * 0.05}s`;
     
-    const now = Date.now();
-    const createdAt = data.createdAt || 0;
-    const lockMinutes = data.lockTimer !== undefined ? Number(data.lockTimer) : 200;
-    const lockTime = lockMinutes * 60 * 1000;
-    let isLocked = lockTime > 0 ? (now - createdAt) < lockTime : false;
-    let timerHTML = isLocked ? `<div class="timer" id="timer-${id}"></div>` : '';
-    let timerInterval;
-
     const isImageCard = data.mediaType === 'image';
     const overlayIcon = isImageCard 
         ? `<svg width="48" height="48" fill="white" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`
@@ -818,206 +689,36 @@ window.buildCard = function(item, index) {
         <div class="play-overlay">
             ${overlayIcon}
         </div>
-        ${timerHTML}
         <div class="info">
             <h4>${data.title}</h4>
             <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">👁 ${data.views || 0} views</p>
         </div>
     `;
 
-    if (isLocked) {
-        const timerEl = card.querySelector(`#timer-${id}`);
-        const updateTimer = () => {
-            const currentNow = Date.now();
-            const remaining = lockTime - (currentNow - createdAt);
-            
-            if (remaining <= 0) {
-                isLocked = false;
-                if (timerEl) timerEl.style.display = 'none';
-                if (timerInterval) clearInterval(timerInterval);
-            } else {
-                const mins = Math.floor(remaining / 1000 / 60);
-                const secs = Math.floor((remaining / 1000) % 60);
-                if (timerEl) timerEl.innerText = `Available in ${mins}m ${secs}s`;
-            }
-        };
-        updateTimer();
-        timerInterval = setInterval(updateTimer, 1000);
-        window.timerIntervals.push(timerInterval);
-    }
-
     card.onclick = () => {
-        if (isLocked) {
-            const currentNow = Date.now();
-            const remaining = lockTime - (currentNow - createdAt);
-            const mins = Math.ceil(remaining / 1000 / 60);
-            showModal("Almost Ready! 🍿", `This video is getting ready for its big premiere! 🎉\n\nIt will be fully playable right here in just ${mins} minute(s).\n\nOnce the countdown timer on the cover finishes, tap here again to start watching!`);
-            return;
-        }
-        
-        const url = getVideoURL(data);
+        // This new function will generate youtube.com/watch, drive.google.com/view, etc.
+        const externalUrl = getPlaybackURL(data); 
 
-        // For Google Photos, open the link immediately to avoid popup blockers and delays on mobile.
-        if (data.platform === 'photos' || (url && url.includes('photos'))) {
-            // Force the link to open in the external native browser (like Google Chrome) instead of the app
+        if (externalUrl) {
+            // Update the view count in the background
+            const videoRef = doc(db, "videos", id);
+            updateDoc(videoRef, { views: increment(1) })
+                .catch(err => console.error("Error updating view count:", err));
+
+            // Force the link to open in an external browser/app, not in-app.
             const a = document.createElement('a');
-            a.href = url;
+            a.href = externalUrl;
             a.target = '_blank';
             a.rel = 'noopener noreferrer';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-
-            // Then, update the view count in the background without delaying the user.
-            const videoRef = doc(db, "videos", id);
-            updateDoc(videoRef, { views: increment(1) })
-                .catch(err => console.error("Error updating view count for photos link:", err));
-            
-            return; // Stop here, do not open the in-app player.
+        } else {
+            showModal("Error", "We're sorry, but the link for this media is missing or corrupted.");
         }
-        
-        // For all other video types (YouTube, Drive, Images), open the regular in-app player.
-        openPlayer(item);
     };
 
     return card;
-};
-
-/* Helper: Open Player & Render Related */
-window.openPlayer = function(item) {
-    const data = item.data;
-    const id = item.id;
-    const url = getVideoURL(data);
-
-    if (!url) {
-        showModal("Error", "We're sorry, but the link for this video is missing or corrupted.");
-        return;
-    }
-
-    // Increment view count in Firebase
-    const videoRef = doc(db, "videos", id);
-    updateDoc(videoRef, { views: increment(1) })
-        .catch(err => console.error("Error updating view count:", err));
-
-    container.innerHTML = `
-        <div class="video-loader" id="videoLoader">
-            <div class="spinner" id="loadingSpinner"></div>
-            <p id="loadingText" style="color: #cbd5e1; font-size: 15px;">Loading media...</p>
-        </div>
-    `;
-
-    const loadTimeout = setTimeout(() => {
-        const loaderText = document.getElementById('loadingText');
-        const spinner = document.getElementById('loadingSpinner');
-        if (loaderText) {
-            loaderText.innerText = 'Error: Video took too long to load. Please try again.';
-            loaderText.style.color = '#ef4444';
-        }
-        if (spinner) {
-            spinner.style.display = 'none';
-        }
-    }, 30000);
-
-    const isDirectImage = data.mediaType === 'image' && (data.platform === 'image' || url.match(/\.(jpeg|jpg|gif|png|webp)$/i));
-
-    if (isDirectImage) {
-        const img = document.createElement('img');
-        img.src = url;
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'contain';
-        img.style.position = 'relative';
-        img.style.zIndex = '10';
-        img.onload = () => {
-            clearTimeout(loadTimeout);
-            const loader = document.getElementById('videoLoader');
-            if (loader) loader.style.display = 'none';
-        };
-        container.appendChild(img);
-    } else if(url.includes("youtube") || url.includes("drive") || data.platform === "other"){
-        const iframe = document.createElement('iframe');
-        iframe.src = url;
-        iframe.setAttribute("allowfullscreen", "true");
-        iframe.setAttribute("allow", "autoplay; encrypted-media");
-        iframe.style.position = 'relative';
-        iframe.style.zIndex = '10';
-        iframe.onload = () => {
-            clearTimeout(loadTimeout);
-            const loader = document.getElementById('videoLoader');
-            if (loader) loader.style.display = 'none';
-        };
-        container.appendChild(iframe);
-    } else {
-        const video = document.createElement('video');
-        video.controls = true;
-        video.autoplay = true;
-        video.style.position = 'relative';
-        video.style.zIndex = '10';
-        video.style.width = '100%';
-        video.style.height = '100%';
-        const source = document.createElement('source');
-        source.src = url;
-        video.appendChild(source);
-        video.onloadeddata = () => {
-            clearTimeout(loadTimeout);
-            const loader = document.getElementById('videoLoader');
-            if (loader) loader.style.display = 'none';
-        };
-        container.appendChild(video);
-    }
-
-    // Initialize action buttons
-    const bookmarkBtn = document.getElementById('bookmarkBtn');
-    const shareBtn = document.getElementById('shareBtn');
-    const bookmarks = getBookmarks();
-    
-    if (bookmarks.includes(id)) {
-        bookmarkBtn.classList.add('active');
-        bookmarkBtn.innerHTML = '🔖 Saved';
-    } else {
-        bookmarkBtn.classList.remove('active');
-        bookmarkBtn.innerHTML = '🔖 Watch Later';
-    }
-
-    bookmarkBtn.onclick = () => {
-        toggleBookmark(id);
-        openPlayer(item); // Refresh player state easily
-    };
-    shareBtn.onclick = () => shareVideo(url);
-
-    renderRelatedVideos(id);
-    window.scrollTo({top: 0, behavior: "smooth"});
-};
-
-/* Helper: Render Related Videos */
-window.renderRelatedVideos = function(currentId) {
-    const relatedSection = document.getElementById("relatedVideosSection");
-    const relatedTitle = document.getElementById("relatedVideosTitle");
-    const relatedGallery = document.getElementById("relatedVideosGallery");
-    relatedGallery.innerHTML = "";
-
-    let related = currentVideos.filter(v => {
-        const cat = v.data.category || 'entertainment';
-        const type = v.data.mediaType || 'video';
-        if (currentCategory === 'images') {
-            return type === 'image' && v.id !== currentId;
-        }
-        return cat === currentCategory && type !== 'image' && v.id !== currentId;
-    });
-
-    if (relatedTitle) relatedTitle.innerText = currentCategory === 'images' ? "Related Images" : "Related Videos";
-
-    // Shuffle array and take top 4
-    related = related.sort(() => 0.5 - Math.random()).slice(0, 4);
-
-    if (related.length === 0) {
-        relatedSection.style.display = "none";
-    } else {
-        relatedSection.style.display = "block";
-        related.forEach((item, idx) => {
-            relatedGallery.appendChild(buildCard(item, idx));
-        });
-    }
 };
 
 let currentUnsubscribe = null;
