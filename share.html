@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineVix - Shared Link</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #0b0f19;
+            color: #cbd5e1;
+        }
+        h1 {
+            color: #e2e8f0;
+            margin-bottom: 10px;
+            font-size: 24px;
+            text-align: center;
+        }
+        .caption {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .photo-container {
+            position: relative;
+            width: 90vw;
+            max-width: 400px;
+            aspect-ratio: 16 / 9;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+            display: inline-block;
+            text-decoration: none;
+            margin-bottom: 10px;
+            background-color: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .photo-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease-in-out;
+        }
+        .photo-container::after {
+            content: '▶';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 50px;
+            color: white;
+            text-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none;
+        }
+        .photo-container.ready:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 40px rgba(59, 130, 246, 0.3);
+        }
+        .photo-container.ready:hover img {
+            transform: scale(1.1);
+        }
+        .photo-container.ready:hover::after {
+            opacity: 1;
+        }
+        .photo-container.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: wait;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(59, 130, 246, 0.2);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>A Special Link from CineVix</h1>
+
+    <!-- The link will be injected here by Firebase -->
+    <a href="#" target="_blank" rel="noopener noreferrer" class="photo-container loading" id="dynamic-link">
+        <div class="spinner"></div>
+    </a>
+    <p class="caption" id="status-text">Fetching latest link from database...</p>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAy-7QGZ05wNf0fLG1-AY2FxJy_fdILdoM",
+            authDomain: "quizifyapp-4c5ca.firebaseapp.com",
+            projectId: "quizifyapp-4c5ca",
+            storageBucket: "quizifyapp-4c5ca.firebasestorage.app",
+            messagingSenderId: "948606346917",
+            appId: "1:948606346917:web:ab385f7753da5c20710f4c",
+            measurementId: "G-C8BJ139KHE"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const linkContainer = document.getElementById('dynamic-link');
+        const statusText = document.getElementById('status-text');
+
+        // Fetch the specific link document in real-time
+        const linkDocRef = doc(db, "shared_links", "latest_link");
+        
+        onSnapshot(linkDocRef, (doc) => {
+            linkContainer.innerHTML = ''; // Clear spinner
+
+            if (doc.exists()) {
+                const data = doc.data();
+                const url = data.url;
+                
+                // Update the HTML Anchor tag with the new URL
+                linkContainer.href = url;
+                linkContainer.classList.remove('loading');
+                linkContainer.classList.add('ready');
+
+                // Create and add the thumbnail image
+                const img = document.createElement('img');
+                // Using a generic thumbnail for simplicity
+                img.src = "https://images.unsplash.com/photo-1574267432553-4b4628081c31?q=80&w=500&auto=format&fit=crop";
+                img.alt = "Tap to view shared media";
+                linkContainer.appendChild(img);
+
+                // Update the UI text
+                statusText.innerText = "Link is ready. Tap the image to open!";
+            } else {
+                // Handle case where the link hasn't been set yet
+                linkContainer.classList.remove('loading');
+                linkContainer.style.cursor = 'default';
+                statusText.innerText = "No special link has been shared yet. Please check back later.";
+                linkContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Nothing to show</p>';
+            }
+        }, (error) => {
+            console.error("Error fetching link: ", error);
+            statusText.innerText = "Error: Could not load the link.";
+            linkContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: #ef4444;">Failed to load</p>';
+        });
+    </script>
+</body>
+</html>
